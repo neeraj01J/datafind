@@ -3,11 +3,14 @@ import os
 import io
 import uuid
 import re
+import tempfile
+import atexit
 
 import pandas as pd
 from docx import Document
 from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
+from pyspark.sql import SparkSession
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key")
@@ -16,12 +19,120 @@ app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".xlsx", ".xls", ".csv", ".txt", ".docx"}
 MAX_FILES_IN_MEMORY = 100
 
-# Demo index: stored in memory while the app is running.
+# In-memory document index.
 documents = {}
+
+# Reuse one Spark session instead of starting Spark for every CSV.
+spark = None
+
+
+def get_spark():
+    """Create the local Spark session when CSV processing is needed."""
+    global spark
+
+    if spark is None:
+        spark = (
+            SparkSession.builder
+            .master("local[2]")
+            .appName("DataFind")
+            .config("spark.ui.enabled", "false")
+            .config("spark.sql.shuffle.partitions", "2")
+            .getOrCreate()
+        )
+        spark.sparkContext.setLogLevel("WARN")
+
+    return spark
+
+
+def stop_spark():
+    """Release Spark resources when the application exits."""
+    global spark
+
+    if spark is not None:
+        try:
+            spark.stop()
+        except Exception:
+            pass
+        spark = None
+
+
+atexit.register(stop_spark)
 
 
 def allowed_file(filename):
     return os.path.splitext(filename.lower())[1] in ALLOWED_EXTENSIONS
+
+
+def extract_csv_with_spark(raw_bytes):
+    """
+    Process CSV data using PySpark and return searchable text.
+
+    The temporary CSV file is removed after Spark has collected
+    its data, including when processing raises an exception.
+    """
+    temp_dir = os.environ.get("TEMP") or os.environ.get("TMP")
+
+    if not temp_dir or not os.path.isdir(temp_dir):
+        temp_dir = None
+
+    temp_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            suffix=".csv",
+            prefix="datafind_",
+            dir=temp_dir,
+            delete=False
+        ) as temp_file:
+            temp_file.write(raw_bytes)
+            temp_path = temp_file.name
+
+        # Spark on Windows accepts local file paths in file:// form.
+        spark_path = (
+            "file:///"
+            + os.path.abspath(temp_path).replace("\\", "/")
+        )
+
+        session = get_spark()
+
+        # Match the existing application's CSV behavior:
+        # first row is the header and values remain strings.
+        frame = (
+            session.read
+            .option("header", "true")
+            .option("inferSchema", "false")
+            .option("encoding", "UTF-8")
+            .option("mode", "PERMISSIVE")
+            .csv(spark_path)
+        )
+
+        columns = frame.columns
+        rows = frame.collect()
+
+        parts = []
+
+        if columns:
+            parts.append(" | ".join(str(column) for column in columns))
+
+        for row in rows:
+            values = [
+                "" if value is None else str(value)
+                for value in row
+            ]
+            parts.append(" | ".join(values))
+
+        return "\n".join(parts)
+
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                app.logger.warning(
+                    "Could not remove temporary CSV file: %s",
+                    temp_path
+                )
 
 
 def extract_text(filename, raw_bytes):
@@ -33,24 +144,19 @@ def extract_text(filename, raw_bytes):
                 return raw_bytes.decode(encoding)
             except UnicodeDecodeError:
                 continue
+
         return raw_bytes.decode("utf-8", errors="replace")
 
     if ext == ".csv":
         try:
-            frame = pd.read_csv(
-                io.BytesIO(raw_bytes),
-                dtype=str,
-                keep_default_na=False,
-                encoding="utf-8-sig"
-            )
-        except UnicodeDecodeError:
-            frame = pd.read_csv(
-                io.BytesIO(raw_bytes),
-                dtype=str,
-                keep_default_na=False,
-                encoding="latin-1"
-            )
-        return frame.to_string(index=False)
+            return extract_csv_with_spark(raw_bytes)
+        except Exception as exc:
+            app.logger.exception("Spark CSV processing failed")
+            raise ValueError(
+                "PySpark could not process this CSV file. "
+                "Check that Spark and Java are configured correctly. "
+                f"Details: {exc}"
+            ) from exc
 
     if ext in {".xlsx", ".xls"}:
         engine = "openpyxl" if ext == ".xlsx" else "xlrd"
@@ -72,6 +178,7 @@ def extract_text(filename, raw_bytes):
 
     if ext == ".docx":
         doc = Document(io.BytesIO(raw_bytes))
+
         parts = [
             paragraph.text
             for paragraph in doc.paragraphs
@@ -156,8 +263,13 @@ def index():
 
                 accepted += 1
 
-            except Exception as exc:
-                flash(f"Could not read {filename}: {exc}", "error")
+            except Exception:
+                app.logger.exception("Could not process %s", filename)
+                flash(
+                    f"Could not read {filename}. Check the file format "
+                    "and application logs for details.",
+                    "error"
+                )
 
         if accepted:
             flash(f"Successfully indexed {accepted} file(s).", "success")
