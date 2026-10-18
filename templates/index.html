@@ -1,0 +1,791 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DataFind | Big Data Search</title>
+
+<style>
+:root {
+    --bg: #f4f7fb;
+    --white: #ffffff;
+    --ink: #182338;
+    --muted: #69778c;
+    --line: #e2e8f0;
+    --blue: #315ee8;
+    --light-blue: #edf2ff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.shell {
+    max-width: 1240px;
+    margin: auto;
+    padding: 26px 24px 45px;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 24px;
+}
+
+.brand {
+    font-size: 23px;
+    font-weight: 800;
+    letter-spacing: -.7px;
+}
+
+.brand span { color: var(--blue); }
+
+.topnote {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.hero, .stat, .panel, .result-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    box-shadow: 0 5px 20px rgba(20,39,80,.035);
+}
+
+.hero {
+    border-radius: 19px;
+    padding: 30px;
+    margin-bottom: 18px;
+}
+
+.eyebrow {
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+h1 {
+    font-size: clamp(27px, 4vw, 38px);
+    line-height: 1.2;
+    letter-spacing: -1.2px;
+    margin: 0 0 10px;
+}
+
+.hero p, .sub {
+    color: var(--muted);
+    margin: 0;
+}
+
+.searchbar {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.searchbox {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border: 1px solid #ccd6e5;
+    border-radius: 11px;
+    background: white;
+}
+
+.searchbox:focus-within {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px #315ee817;
+}
+
+.searchbox input {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 0;
+    border: 0;
+    outline: 0;
+    font-size: 14px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 12px 17px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--blue);
+    color: white;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn:hover { filter: brightness(.96); }
+.btn-light { background: var(--light-blue); color: #2448b5; }
+.btn-gray { background: #eff2f7; color: #526176; }
+.full { width: 100%; }
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+    margin-bottom: 18px;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 19px;
+    border-radius: 14px;
+    min-width: 0;
+}
+
+.stat-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--light-blue);
+    color: var(--blue);
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.stat strong {
+    display: block;
+    font-size: 24px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.stat small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 315px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.panel {
+    padding: 20px;
+    border-radius: 16px;
+    min-width: 0;
+}
+
+h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 750;
+}
+
+.sub {
+    margin: 5px 0 15px;
+    font-size: 12px;
+}
+
+.dropzone {
+    padding: 17px;
+    border: 1.5px dashed #bdcbe0;
+    border-radius: 12px;
+    background: #f9fbff;
+}
+
+.upload-icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 10px;
+    border-radius: 11px;
+    background: var(--light-blue);
+    color: var(--blue);
+    font-size: 21px;
+}
+
+.dropzone p {
+    margin: 5px 0 13px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.dropzone input {
+    width: 100%;
+    margin-bottom: 13px;
+    font-size: 12px;
+}
+
+.formats {
+    margin: 13px 0 23px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.8;
+}
+
+.listhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.count, .pill {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 20px;
+    background: var(--light-blue);
+    color: #2449b4;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.doclist {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.doclist li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-top: 1px solid var(--line);
+}
+
+.fileicon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    background: #eff2f7;
+    font-size: 10px;
+    font-weight: 800;
+    color: #526176;
+}
+
+.docname {
+    font-size: 12px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.docmeta {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.results { min-width: 0; }
+
+.results-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 2px 0 15px;
+}
+
+.results-title {
+    font-size: 19px;
+    font-weight: 800;
+}
+
+.results-sub {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-bottom: 14px;
+}
+
+.filters select {
+    max-width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: white;
+    color: #46546a;
+}
+
+.summary {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    border: 1px solid #dce6ff;
+    border-radius: 10px;
+    background: #edf3ff;
+    color: #2449b4;
+    font-size: 12px;
+}
+
+.result-card {
+    min-width: 0;
+    padding: 15px 16px;
+    margin-bottom: 10px;
+    border-radius: 13px;
+}
+
+.resulttop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.filename {
+    font-size: 13px;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+}
+
+.resultmeta {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.snippet {
+    margin: 11px 0 0;
+    color: #4e5c70;
+    font-size: 13px;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+mark.hit {
+    padding: 2px 3px;
+    border-radius: 3px;
+    background: #ffeb9c;
+    color: #614500;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+details { margin-top: 12px; }
+
+summary {
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.allmatches {
+    padding-top: 5px;
+    margin-top: 10px;
+    border-top: 1px solid var(--line);
+}
+
+.matchrow {
+    padding: 11px 0;
+    border-bottom: 1px solid #eef1f6;
+}
+
+.matchrow:last-child { border-bottom: 0; }
+
+.matchline {
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.matchtext {
+    color: #536176;
+    font-size: 12px;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.empty {
+    padding: 44px 20px;
+    border: 1px dashed #cbd5e3;
+    border-radius: 14px;
+    background: white;
+    color: var(--muted);
+    text-align: center;
+}
+
+.empty-icon {
+    margin-bottom: 9px;
+    font-size: 28px;
+}
+
+.empty strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--ink);
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 13px;
+    padding: 15px 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.pagination .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.flash {
+    padding: 11px 14px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.success { background: #e9f8ef; color: #17643b; }
+.error { background: #fff0f0; color: #9a2424; }
+
+.footer {
+    margin-top: 25px;
+    color: #8590a1;
+    font-size: 11px;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .topnote { display: none; }
+}
+
+@media (max-width: 540px) {
+    .shell { padding: 15px 12px 32px; }
+    .hero { padding: 21px; }
+    .searchbar { flex-direction: column; }
+    .searchbar .btn { width: 100%; }
+    .stats { gap: 8px; }
+    .stat { padding: 12px; gap: 8px; }
+    .stat-icon { display: none; }
+    .stat strong { font-size: 21px; }
+    .panel { padding: 15px; }
+    .results-head { align-items: flex-start; flex-direction: column; }
+}
+</style>
+</head>
+
+<body>
+<div class="shell">
+
+<header class="topbar">
+    <div class="brand">Data<span>Find</span></div>
+    <div class="topnote">BIG DATA FRAMEWORK · DOCUMENT SEARCH</div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+<section class="hero">
+    <div class="eyebrow">Document intelligence</div>
+    <h1>Search across your files.</h1>
+    <p>Find information across Excel, CSV, text and Word documents in one place.</p>
+
+    <form class="searchbar" method="get" action="/">
+        <label class="searchbox">
+            <span>⌕</span>
+            <input type="text" name="q" value="{{ query }}"
+                   placeholder="Search a keyword or exact phrase..."
+                   aria-label="Search query">
+        </label>
+        <button class="btn" type="submit">Search files →</button>
+        {% if query %}
+            <a class="btn btn-light" href="{{ url_for('index') }}">Reset</a>
+        {% endif %}
+    </form>
+</section>
+
+<section class="stats">
+    <div class="stat">
+        <div class="stat-icon">▤</div>
+        <div><strong>{{ stats.files }}</strong><small>Indexed files</small></div>
+    </div>
+    <div class="stat">
+        <div class="stat-icon">≋</div>
+        <div><strong>{{ "{:,}".format(stats.characters) }}</strong><small>Characters indexed</small></div>
+    </div>
+    <div class="stat">
+        <div class="stat-icon">⌕</div>
+        <div><strong>{{ "{:,}".format(stats.matches) }}</strong><small>Matching occurrences</small></div>
+    </div>
+    <div class="stat">
+        <div class="stat-icon">▣</div>
+        <div><strong>{{ stats.matching_files if query else 0 }}</strong><small>Files with matches</small></div>
+    </div>
+</section>
+
+<div class="layout">
+
+<aside class="panel">
+    <h2>Upload documents</h2>
+    <p class="sub">Add files to your searchable index.</p>
+
+    <form method="post" enctype="multipart/form-data">
+        <div class="dropzone">
+            <div class="upload-icon">↑</div>
+            <strong>Select your files</strong>
+            <p>Choose one or multiple documents.</p>
+            <input type="file" name="files" multiple
+                   accept=".xlsx,.xls,.csv,.txt,.docx" required>
+            <button class="btn full" type="submit">Upload and index</button>
+        </div>
+    </form>
+
+    <div class="formats">
+        SUPPORTED FORMATS<br>
+        XLSX · XLS · CSV · TXT · DOCX<br>
+        Maximum request size: 25 MB.
+    </div>
+
+    <div class="listhead">
+        <h2>Indexed files</h2>
+        <span class="count">{{ documents|length }} files</span>
+    </div>
+
+    {% if documents %}
+        <ul class="doclist">
+        {% for doc in documents %}
+            <li>
+                <div class="fileicon">{{ doc.ext[:4] }}</div>
+                <div style="min-width:0">
+                    <div class="docname">{{ doc.name }}</div>
+                    <div class="docmeta">
+                        {{ "{:,}".format(doc.characters) }} characters
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+        </ul>
+
+        <form method="post" action="{{ url_for('clear_index') }}"
+              onsubmit="return confirm('Clear all indexed files?');"
+              style="margin-top:16px">
+            <button class="btn btn-gray full" type="submit">Clear index</button>
+        </form>
+    {% else %}
+        <div class="empty" style="padding:22px 12px">
+            <strong>No files yet</strong>
+            Upload a document to get started.
+        </div>
+    {% endif %}
+</aside>
+
+<main class="results">
+
+    <div class="results-head">
+        <div>
+            <h2 class="results-title">
+                {% if query %}Search results{% else %}Explore your index{% endif %}
+            </h2>
+            <div class="results-sub">
+                {% if query %}
+                    Showing all matches for <strong>{{ query }}</strong>
+                {% else %}
+                    Your document matches will appear here.
+                {% endif %}
+            </div>
+        </div>
+
+        {% if query %}
+            <span class="count">{{ total_occurrences }} occurrences</span>
+        {% endif %}
+    </div>
+
+    {% if query %}
+    <form method="get" action="/" class="filters">
+        <input type="hidden" name="q" value="{{ query }}">
+
+        <select name="type" aria-label="Filter file type"
+                onchange="this.form.submit()">
+            <option value="ALL" {% if file_filter == 'ALL' %}selected{% endif %}>
+                All file types
+            </option>
+            {% for ext in extensions %}
+                <option value="{{ ext }}"
+                    {% if file_filter == ext %}selected{% endif %}>
+                    {{ ext }} files
+                </option>
+            {% endfor %}
+        </select>
+
+        <select name="sort" aria-label="Sort results"
+                onchange="this.form.submit()">
+            <option value="relevance"
+                {% if sort == 'relevance' %}selected{% endif %}>
+                Most matches
+            </option>
+            <option value="matches"
+                {% if sort == 'matches' %}selected{% endif %}>
+                Match count
+            </option>
+            <option value="name"
+                {% if sort == 'name' %}selected{% endif %}>
+                Filename A–Z
+            </option>
+        </select>
+
+        <input type="hidden" name="page" value="1">
+    </form>
+    {% endif %}
+
+    {% if query %}
+        {% if visible_occurrences %}
+
+            <div class="summary">
+                <span>
+                    Found <strong>{{ "{:,}".format(total_occurrences) }}</strong>
+                    matching occurrences in
+                    <strong>{{ file_results|length }}</strong> file(s).
+                </span>
+                <span>Page {{ page }} of {{ total_pages }} · 25 matches per page</span>
+            </div>
+
+            <!-- Each occurrence is displayed individually. -->
+            {% for item in visible_occurrences %}
+            <article class="result-card">
+                <div class="resulttop">
+                    <div class="filename">▤ &nbsp;{{ item.name }}</div>
+                    <span class="pill">{{ item.ext }}</span>
+                </div>
+
+                <div class="resultmeta">
+                    Line {{ item.line }} ·
+                    Character position {{ "{:,}".format(item.position) }}
+                </div>
+
+                <p class="snippet">{{ item.before }}<mark class="hit">{{ item.matched }}</mark>{{ item.after }}</p>
+            </article>
+            {% endfor %}
+
+            {% if total_pages > 1 %}
+            <nav class="pagination" aria-label="Search result pages">
+                {% if page > 1 %}
+                    <a class="btn btn-light"
+                       href="{{ url_for('index', q=query, type=file_filter, sort=sort, page=page-1) }}">
+                        ← Previous
+                    </a>
+                {% endif %}
+
+                <span>Page {{ page }} / {{ total_pages }}</span>
+
+                {% if page < total_pages %}
+                    <a class="btn btn-light"
+                       href="{{ url_for('index', q=query, type=file_filter, sort=sort, page=page+1) }}">
+                        Next →
+                    </a>
+                {% endif %}
+            </nav>
+            {% endif %}
+
+            <div style="margin-top:22px">
+                <h2 class="results-title" style="margin-bottom:12px">
+                    Matches grouped by file
+                </h2>
+
+                {% for file in file_results %}
+                <article class="result-card">
+                    <div class="resulttop">
+                        <div class="filename">{{ file.name }}</div>
+                        <span class="pill">
+                            {{ file.matches }} match{% if file.matches != 1 %}es{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="resultmeta">
+                        {{ file.ext }} ·
+                        {{ "{:,}".format(file.characters) }} characters
+                    </div>
+
+                    <details>
+                        <summary>
+                            View all {{ file.matches }} matches in this file
+                        </summary>
+
+                        <div class="allmatches">
+                            {% for match in file.occurrences %}
+                            <div class="matchrow">
+                                <div class="matchline">
+                                    Match {{ loop.index }} ·
+                                    Line {{ match.line }} ·
+                                    Position {{ "{:,}".format(match.position) }}
+                                </div>
+
+                                <div class="matchtext">{{ match.before }}<mark class="hit">{{ match.matched }}</mark>{{ match.after }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </article>
+                {% endfor %}
+            </div>
+
+        {% else %}
+            <div class="empty">
+                <div class="empty-icon">⌕</div>
+                <strong>No matches found</strong>
+                Try a different keyword or change the file-type filter.
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="empty">
+            <div class="empty-icon">⌕</div>
+            <strong>Ready to search</strong>
+            Upload your files, enter a keyword above, and every matching
+            occurrence will be listed here.
+        </div>
+    {% endif %}
+
+</main>
+</div>
+
+<div class="footer">
+    DataFind · File indexing and keyword search · In-memory demo application
+</div>
+
+</div>
+</body>
+</html>
